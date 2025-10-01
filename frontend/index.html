@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TodoList - 할 일 관리</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 헤더 섹션 -->
+        <header class="header">
+            <h1>📝 나의 할 일 목록</h1>
+            <p class="subtitle">오늘 할 일을 체계적으로 관리하세요</p>
+        </header>
+
+        <!-- 입력 섹션 -->
+        <div class="input-section">
+            <div class="input-group">
+                <input 
+                    type="text" 
+                    id="todoTitle" 
+                    class="todo-input" 
+                    placeholder="할 일 제목을 입력하세요..."
+                    autocomplete="off"
+                >
+                <input 
+                    type="text" 
+                    id="todoDescription" 
+                    class="todo-input description" 
+                    placeholder="상세 설명 (선택사항)"
+                    autocomplete="off"
+                >
+                <button id="addBtn" class="btn btn-primary">
+                    <span>추가하기</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- 필터 및 통계 섹션 -->
+        <div class="filter-section">
+            <div class="stats">
+                <span class="stat-item">전체: <strong id="totalCount">0</strong></span>
+                <span class="stat-item">진행중: <strong id="activeCount">0</strong></span>
+                <span class="stat-item">완료: <strong id="completedCount">0</strong></span>
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-filter="all">전체</button>
+                <button class="filter-btn" data-filter="active">진행중</button>
+                <button class="filter-btn" data-filter="completed">완료</button>
+            </div>
+        </div>
+
+        <!-- 할 일 목록 섹션 -->
+        <div class="todos-section">
+            <ul id="todoList" class="todo-list">
+                <!-- JavaScript로 동적 생성 -->
+            </ul>
+            <div id="emptyState" class="empty-state">
+                <div class="empty-icon">📋</div>
+                <p>아직 할 일이 없습니다.</p>
+                <p class="empty-hint">위에서 새로운 할 일을 추가해보세요!</p>
+            </div>
+        </div>
+
+        <!-- 하단 액션 버튼 -->
+        <div class="footer-actions">
+            <button id="clearCompletedBtn" class="btn btn-secondary">
+                완료된 항목 삭제
+            </button>
+            <button id="clearAllBtn" class="btn btn-danger">
+                전체 삭제
+            </button>
+        </div>
+    </div>
+
+    <!-- 로딩 스피너 -->
+    <div id="loadingSpinner" class="loading-spinner hidden">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- 알림 메시지 -->
+    <div id="notification" class="notification hidden"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

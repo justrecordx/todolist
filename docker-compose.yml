@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+    restart: unless-stopped
+    volumes:
+      # 개발 중에는 볼륨 마운트 (프로덕션에서는 제거)
+      - ./frontend:/app/frontend
+
