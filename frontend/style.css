@@ -447,6 +447,288 @@ body {
     }
 }
 
+/* 우선순위 및 마감일 관련 스타일 */
+.priority-due-section {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.priority-selector,
+.due-date-selector {
+    flex: 1;
+}
+
+.priority-select,
+.due-date-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.priority-select:focus,
+.due-date-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.due-date-input {
+    cursor: text;
+}
+
+/* 카테고리 관련 스타일 */
+.category-selector {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.category-select {
+    flex: 1;
+    padding: 12px 16px;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.category-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.btn-small {
+    padding: 8px 12px;
+    font-size: 14px;
+    min-width: auto;
+}
+
+.filter-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-selectors {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.category-filter {
+    display: flex;
+    align-items: center;
+}
+
+.category-filter-select,
+.priority-filter-select,
+.sort-filter-select {
+    padding: 8px 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.category-filter-select:focus,
+.priority-filter-select:focus,
+.sort-filter-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.priority-filter,
+.sort-filter {
+    display: flex;
+    align-items: center;
+}
+
+.todo-item .category-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: white;
+    margin-left: 8px;
+}
+
+.category-badge.기본 { background-color: #3B82F6; }
+.category-badge.업무 { background-color: #EF4444; }
+.category-badge.개인 { background-color: #10B981; }
+.category-badge.쇼핑 { background-color: #F59E0B; }
+.category-badge.학습 { background-color: #8B5CF6; }
+
+/* 우선순위 배지 */
+.todo-item .priority-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: white;
+    margin-left: 8px;
+}
+
+.priority-badge.높음 { background-color: #EF4444; }
+.priority-badge.보통 { background-color: #F59E0B; }
+.priority-badge.낮음 { background-color: #10B981; }
+
+/* 마감일 관련 스타일 */
+.todo-item .due-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-left: 8px;
+}
+
+.todo-item .due-date.urgent {
+    color: #EF4444;
+    font-weight: 500;
+}
+
+.todo-item .due-date.overdue {
+    color: #DC2626;
+    font-weight: bold;
+}
+
+.todo-item .due-date.warning {
+    color: #F59E0B;
+    font-weight: 500;
+}
+
+/* 우선순위별 할 일 아이템 스타일 */
+.todo-item.priority-high {
+    border-left: 4px solid #EF4444;
+}
+
+.todo-item.priority-medium {
+    border-left: 4px solid #F59E0B;
+}
+
+.todo-item.priority-low {
+    border-left: 4px solid #10B981;
+}
+
+/* 마감일 임박/지연 스타일 */
+.todo-item.urgent {
+    background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+    border: 2px solid #FECACA;
+}
+
+.todo-item.overdue {
+    background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+    border: 2px solid #FCA5A5;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
+
+/* 카테고리 추가 모달 */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: var(--bg-secondary);
+    padding: 24px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-xl);
+    min-width: 300px;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: var(--transition);
+}
+
+.close-btn:hover {
+    color: var(--text-primary);
+}
+
+.modal-body {
+    margin-bottom: 16px;
+}
+
+.modal-body input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.modal-body input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.modal-footer {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
 @media (max-width: 480px) {
     body {
         padding: 10px;
@@ -465,6 +747,249 @@ body {
     }
     
     .footer-actions .btn {
+        width: 100%;
+    }
+    
+    .filter-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .category-filter {
+        width: 100%;
+    }
+    
+    .category-filter-select {
+        width: 100%;
+    }
+}
+
+/* 통계 모달 스타일 */
+.stats-modal {
+    max-width: 800px;
+    width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.stats-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 10px;
+}
+
+.stats-tab {
+    padding: 8px 16px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: var(--transition);
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.stats-tab:hover {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.stats-tab.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.stats-tab-content {
+    display: none;
+}
+
+.stats-tab-content.active {
+    display: block;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: var(--bg-primary);
+    padding: 20px;
+    border-radius: var(--border-radius);
+    text-align: center;
+    border: 2px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-md);
+}
+
+.stat-card h4 {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.stat-number {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.category-stats {
+    margin-top: 24px;
+}
+
+.category-stats h4 {
+    margin-bottom: 16px;
+    color: var(--text-primary);
+}
+
+.category-stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.category-stat-item .category-name {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.category-stat-item .category-numbers {
+    display: flex;
+    gap: 16px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.productivity-metrics,
+.completion-metrics {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    min-width: 120px;
+}
+
+.metric-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.metric-value {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+.daily-stats-item,
+.weekly-stats-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.daily-stats-item .date,
+.weekly-stats-item .week {
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+.daily-stats-item .numbers,
+.weekly-stats-item .numbers {
+    display: flex;
+    gap: 16px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.completion-details {
+    margin-top: 20px;
+}
+
+.completion-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-primary);
+    border-radius: 8px;
+    margin-bottom: 8px;
+}
+
+.completion-item .todo-info {
+    flex: 1;
+}
+
+.completion-item .todo-title {
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.completion-item .todo-category {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.completion-item .completion-time {
+    font-size: 14px;
+    color: var(--primary-color);
+    font-weight: 500;
+}
+
+/* 차트 컨테이너 */
+canvas {
+    max-width: 100%;
+    height: auto;
+    margin: 16px 0;
+}
+
+@media (max-width: 768px) {
+    .stats-modal {
+        width: 95vw;
+        max-height: 95vh;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .productivity-metrics,
+    .completion-metrics {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .metric {
+        min-width: auto;
         width: 100%;
     }
 }

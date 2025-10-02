@@ -4,6 +4,13 @@ const API_BASE_URL = 'http://localhost:8000/api';
 // DOM 요소 가져오기
 const todoTitleInput = document.getElementById('todoTitle');
 const todoDescriptionInput = document.getElementById('todoDescription');
+const todoPrioritySelect = document.getElementById('todoPriority');
+const todoDueDateInput = document.getElementById('todoDueDate');
+const todoCategorySelect = document.getElementById('todoCategory');
+const addCategoryBtn = document.getElementById('addCategoryBtn');
+const categoryFilterSelect = document.getElementById('categoryFilter');
+const priorityFilterSelect = document.getElementById('priorityFilter');
+const sortFilterSelect = document.getElementById('sortFilter');
 const addBtn = document.getElementById('addBtn');
 const todoList = document.getElementById('todoList');
 const emptyState = document.getElementById('emptyState');
@@ -11,6 +18,22 @@ const loadingSpinner = document.getElementById('loadingSpinner');
 const notification = document.getElementById('notification');
 const clearCompletedBtn = document.getElementById('clearCompletedBtn');
 const clearAllBtn = document.getElementById('clearAllBtn');
+
+// 모달 관련 요소
+const categoryModal = document.getElementById('categoryModal');
+const closeModal = document.getElementById('closeModal');
+const cancelCategory = document.getElementById('cancelCategory');
+const saveCategory = document.getElementById('saveCategory');
+const newCategoryName = document.getElementById('newCategoryName');
+const newCategoryColor = document.getElementById('newCategoryColor');
+
+// 통계 모달 관련 요소
+const statsModal = document.getElementById('statsModal');
+const showStatsBtn = document.getElementById('showStatsBtn');
+const closeStatsModal = document.getElementById('closeStatsModal');
+const closeStatsBtn = document.getElementById('closeStatsBtn');
+const statsTabs = document.querySelectorAll('.stats-tab');
+const statsTabContents = document.querySelectorAll('.stats-tab-content');
 
 // 통계 요소
 const totalCount = document.getElementById('totalCount');
@@ -22,11 +45,16 @@ const filterButtons = document.querySelectorAll('.filter-btn');
 
 // 전역 상태
 let todos = [];
+let categories = [];
 let currentFilter = 'all';
+let currentCategoryFilter = 'all';
+let currentPriorityFilter = 'all';
+let currentSort = 'created';
 
 // 초기화
 document.addEventListener('DOMContentLoaded', () => {
     console.log('TodoList 앱 초기화...');
+    loadCategories();
     loadTodos();
     setupEventListeners();
 });
@@ -56,6 +84,61 @@ function setupEventListeners() {
             currentFilter = btn.dataset.filter;
             renderTodos();
         });
+    });
+
+    // 카테고리 필터
+    categoryFilterSelect.addEventListener('change', () => {
+        currentCategoryFilter = categoryFilterSelect.value;
+        renderTodos();
+    });
+
+    // 우선순위 필터
+    priorityFilterSelect.addEventListener('change', () => {
+        currentPriorityFilter = priorityFilterSelect.value;
+        renderTodos();
+    });
+
+    // 정렬 필터
+    sortFilterSelect.addEventListener('change', () => {
+        currentSort = sortFilterSelect.value;
+        loadTodos();
+    });
+
+    // 카테고리 추가 버튼
+    addCategoryBtn.addEventListener('click', () => {
+        showCategoryModal();
+    });
+
+    // 모달 이벤트
+    closeModal.addEventListener('click', hideCategoryModal);
+    cancelCategory.addEventListener('click', hideCategoryModal);
+    saveCategory.addEventListener('click', handleSaveCategory);
+
+    // 모달 외부 클릭시 닫기
+    categoryModal.addEventListener('click', (e) => {
+        if (e.target === categoryModal) {
+            hideCategoryModal();
+        }
+    });
+
+    // 통계 모달 이벤트
+    showStatsBtn.addEventListener('click', showStatsModal);
+    closeStatsModal.addEventListener('click', hideStatsModal);
+    closeStatsBtn.addEventListener('click', hideStatsModal);
+
+    // 통계 탭 이벤트
+    statsTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabName = tab.dataset.tab;
+            switchStatsTab(tabName);
+        });
+    });
+
+    // 통계 모달 외부 클릭시 닫기
+    statsModal.addEventListener('click', (e) => {
+        if (e.target === statsModal) {
+            hideStatsModal();
+        }
     });
 }
 
@@ -91,10 +174,24 @@ async function apiCall(endpoint, method = 'GET', data = null) {
     }
 }
 
+// 모든 카테고리 불러오기
+async function loadCategories() {
+    try {
+        categories = await apiCall('/categories');
+        updateCategorySelects();
+    } catch (error) {
+        console.error('카테고리 목록 불러오기 실패:', error);
+    }
+}
+
 // 모든 할 일 불러오기
 async function loadTodos() {
     try {
-        todos = await apiCall('/todos');
+        if (currentSort === 'created') {
+            todos = await apiCall('/todos');
+        } else {
+            todos = await apiCall(`/sort-todos?sort_by=${currentSort}`);
+        }
         renderTodos();
         updateStats();
     } catch (error) {
@@ -106,6 +203,9 @@ async function loadTodos() {
 async function handleAddTodo() {
     const title = todoTitleInput.value.trim();
     const description = todoDescriptionInput.value.trim();
+    const category = todoCategorySelect.value;
+    const priority = todoPrioritySelect.value;
+    const dueDate = todoDueDateInput.value;
 
     if (!title) {
         showNotification('할 일 제목을 입력해주세요!', 'error');
@@ -117,6 +217,9 @@ async function handleAddTodo() {
         const newTodo = await apiCall('/todos', 'POST', {
             title,
             description,
+            category,
+            priority,
+            due_date: dueDate || null,
             completed: false
         });
 
@@ -127,6 +230,7 @@ async function handleAddTodo() {
         // 입력 필드 초기화
         todoTitleInput.value = '';
         todoDescriptionInput.value = '';
+        todoDueDateInput.value = '';
         todoTitleInput.focus();
 
         showNotification('할 일이 추가되었습니다! ✅');
@@ -256,10 +360,26 @@ async function handleClearAll() {
 function renderTodos() {
     // 필터링
     let filteredTodos = todos;
+    
+    // 상태 필터링
     if (currentFilter === 'active') {
-        filteredTodos = todos.filter(t => !t.completed);
+        filteredTodos = filteredTodos.filter(t => !t.completed);
     } else if (currentFilter === 'completed') {
-        filteredTodos = todos.filter(t => t.completed);
+        filteredTodos = filteredTodos.filter(t => t.completed);
+    } else if (currentFilter === 'urgent') {
+        filteredTodos = filteredTodos.filter(t => isUrgent(t));
+    } else if (currentFilter === 'overdue') {
+        filteredTodos = filteredTodos.filter(t => isOverdue(t));
+    }
+    
+    // 카테고리 필터링
+    if (currentCategoryFilter !== 'all') {
+        filteredTodos = filteredTodos.filter(t => t.category === currentCategoryFilter);
+    }
+    
+    // 우선순위 필터링
+    if (currentPriorityFilter !== 'all') {
+        filteredTodos = filteredTodos.filter(t => t.priority === currentPriorityFilter);
     }
 
     // 빈 상태 처리
@@ -272,8 +392,13 @@ function renderTodos() {
     emptyState.classList.add('hidden');
 
     // 할 일 목록 렌더링
-    todoList.innerHTML = filteredTodos.map(todo => `
-        <li class="todo-item ${todo.completed ? 'completed' : ''}" data-id="${todo.id}">
+    todoList.innerHTML = filteredTodos.map(todo => {
+        const priorityClass = getPriorityClass(todo.priority);
+        const urgencyClass = getUrgencyClass(todo);
+        const dueDateHtml = getDueDateHtml(todo);
+        
+        return `
+        <li class="todo-item ${todo.completed ? 'completed' : ''} ${priorityClass} ${urgencyClass}" data-id="${todo.id}">
             <input 
                 type="checkbox" 
                 class="todo-checkbox" 
@@ -281,7 +406,12 @@ function renderTodos() {
                 onchange="handleToggleTodo(${todo.id})"
             >
             <div class="todo-content" onclick="handleToggleTodo(${todo.id})">
-                <div class="todo-title">${escapeHtml(todo.title)}</div>
+                <div class="todo-title">
+                    ${escapeHtml(todo.title)}
+                    <span class="category-badge ${todo.category || '기본'}">${todo.category || '기본'}</span>
+                    <span class="priority-badge ${todo.priority || '보통'}">${todo.priority || '보통'}</span>
+                    ${dueDateHtml}
+                </div>
                 ${todo.description ? `<div class="todo-description">${escapeHtml(todo.description)}</div>` : ''}
                 ${todo.created_at ? `<div class="todo-meta">생성: ${formatDate(todo.created_at)}</div>` : ''}
             </div>
@@ -294,7 +424,8 @@ function renderTodos() {
                 </button>
             </div>
         </li>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // 통계 업데이트
@@ -361,5 +492,396 @@ function formatDate(dateString) {
         hour: '2-digit',
         minute: '2-digit'
     });
+}
+
+// 카테고리 관련 함수들
+function updateCategorySelects() {
+    // 할 일 추가용 카테고리 선택
+    todoCategorySelect.innerHTML = '';
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.name;
+        option.textContent = category.name;
+        option.style.color = category.color;
+        todoCategorySelect.appendChild(option);
+    });
+
+    // 필터용 카테고리 선택
+    categoryFilterSelect.innerHTML = '<option value="all">모든 카테고리</option>';
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.name;
+        option.textContent = category.name;
+        option.style.color = category.color;
+        categoryFilterSelect.appendChild(option);
+    });
+}
+
+function showCategoryModal() {
+    categoryModal.style.display = 'block';
+    newCategoryName.value = '';
+    newCategoryColor.value = '#3B82F6';
+    newCategoryName.focus();
+}
+
+function hideCategoryModal() {
+    categoryModal.style.display = 'none';
+}
+
+async function handleSaveCategory() {
+    const name = newCategoryName.value.trim();
+    const color = newCategoryColor.value;
+
+    if (!name) {
+        showNotification('카테고리 이름을 입력해주세요!', 'error');
+        newCategoryName.focus();
+        return;
+    }
+
+    // 중복 체크
+    if (categories.some(cat => cat.name === name)) {
+        showNotification('이미 존재하는 카테고리입니다!', 'error');
+        newCategoryName.focus();
+        return;
+    }
+
+    try {
+        const newCategory = await apiCall('/categories', 'POST', {
+            name,
+            color
+        });
+
+        categories.push(newCategory);
+        updateCategorySelects();
+        hideCategoryModal();
+
+        showNotification('새 카테고리가 추가되었습니다! 🏷️');
+    } catch (error) {
+        console.error('카테고리 추가 실패:', error);
+    }
+}
+
+// 통계 관련 함수들
+function showStatsModal() {
+    statsModal.style.display = 'block';
+    loadOverviewStats();
+}
+
+function hideStatsModal() {
+    statsModal.style.display = 'none';
+}
+
+function switchStatsTab(tabName) {
+    // 모든 탭 비활성화
+    statsTabs.forEach(tab => tab.classList.remove('active'));
+    statsTabContents.forEach(content => content.classList.remove('active'));
+    
+    // 선택된 탭 활성화
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    document.getElementById(`${tabName}-tab`).classList.add('active');
+    
+    // 해당 탭 데이터 로드
+    switch(tabName) {
+        case 'overview':
+            loadOverviewStats();
+            break;
+        case 'daily':
+            loadDailyStats();
+            break;
+        case 'weekly':
+            loadWeeklyStats();
+            break;
+        case 'productivity':
+            loadProductivityStats();
+            break;
+        case 'completion':
+            loadCompletionStats();
+            break;
+    }
+}
+
+async function loadOverviewStats() {
+    try {
+        const stats = await apiCall('/stats/overview');
+        
+        document.getElementById('totalTodos').textContent = stats.total_todos;
+        document.getElementById('completedTodos').textContent = stats.completed_todos;
+        document.getElementById('activeTodos').textContent = stats.active_todos;
+        document.getElementById('completionRate').textContent = `${stats.overall_completion_rate}%`;
+        
+        // 카테고리별 통계
+        const categoryStatsList = document.getElementById('categoryStatsList');
+        categoryStatsList.innerHTML = '';
+        
+        for (const [categoryName, categoryStats] of Object.entries(stats.category_stats)) {
+            const categoryItem = document.createElement('div');
+            categoryItem.className = 'category-stat-item';
+            categoryItem.innerHTML = `
+                <div class="category-name">${categoryName}</div>
+                <div class="category-numbers">
+                    <span>전체: ${categoryStats.total}</span>
+                    <span>완료: ${categoryStats.completed}</span>
+                    <span>완료율: ${categoryStats.completion_rate}%</span>
+                </div>
+            `;
+            categoryStatsList.appendChild(categoryItem);
+        }
+    } catch (error) {
+        console.error('개요 통계 로드 실패:', error);
+    }
+}
+
+async function loadDailyStats() {
+    try {
+        const dailyStats = await apiCall('/stats/daily?days=7');
+        
+        // 차트 생성
+        const ctx = document.getElementById('dailyChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dailyStats.map(stat => stat.date),
+                datasets: [{
+                    label: '완료된 할 일',
+                    data: dailyStats.map(stat => stat.completed),
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4
+                }, {
+                    label: '생성된 할 일',
+                    data: dailyStats.map(stat => stat.created),
+                    borderColor: '#10B981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '일별 할 일 현황'
+                    }
+                }
+            }
+        });
+        
+        // 상세 통계 표시
+        const dailyStatsList = document.getElementById('dailyStatsList');
+        dailyStatsList.innerHTML = '';
+        
+        dailyStats.forEach(stat => {
+            const statItem = document.createElement('div');
+            statItem.className = 'daily-stats-item';
+            statItem.innerHTML = `
+                <div class="date">${stat.date}</div>
+                <div class="numbers">
+                    <span>생성: ${stat.created}</span>
+                    <span>완료: ${stat.completed}</span>
+                    <span>완료율: ${stat.completion_rate}%</span>
+                </div>
+            `;
+            dailyStatsList.appendChild(statItem);
+        });
+    } catch (error) {
+        console.error('일별 통계 로드 실패:', error);
+    }
+}
+
+async function loadWeeklyStats() {
+    try {
+        const weeklyStats = await apiCall('/stats/weekly?weeks=4');
+        
+        // 차트 생성
+        const ctx = document.getElementById('weeklyChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: weeklyStats.map(stat => stat.week),
+                datasets: [{
+                    label: '완료된 할 일',
+                    data: weeklyStats.map(stat => stat.completed),
+                    backgroundColor: '#3B82F6'
+                }, {
+                    label: '생성된 할 일',
+                    data: weeklyStats.map(stat => stat.created),
+                    backgroundColor: '#10B981'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '주별 할 일 현황'
+                    }
+                }
+            }
+        });
+        
+        // 상세 통계 표시
+        const weeklyStatsList = document.getElementById('weeklyStatsList');
+        weeklyStatsList.innerHTML = '';
+        
+        weeklyStats.forEach(stat => {
+            const statItem = document.createElement('div');
+            statItem.className = 'weekly-stats-item';
+            statItem.innerHTML = `
+                <div class="week">${stat.week}</div>
+                <div class="numbers">
+                    <span>생성: ${stat.created}</span>
+                    <span>완료: ${stat.completed}</span>
+                    <span>완료율: ${stat.completion_rate}%</span>
+                </div>
+            `;
+            weeklyStatsList.appendChild(statItem);
+        });
+    } catch (error) {
+        console.error('주별 통계 로드 실패:', error);
+    }
+}
+
+async function loadProductivityStats() {
+    try {
+        const productivityStats = await apiCall('/stats/productivity');
+        
+        document.getElementById('productivityRate').textContent = `${productivityStats.productivity_rate}%`;
+        document.getElementById('totalCreated').textContent = productivityStats.total_created;
+        document.getElementById('totalCompleted').textContent = productivityStats.total_completed;
+        
+        // 생산성 차트 생성
+        const ctx = document.getElementById('productivityChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: productivityStats.daily_productivity.map(day => day.date),
+                datasets: [{
+                    label: '생성된 할 일',
+                    data: productivityStats.daily_productivity.map(day => day.created),
+                    borderColor: '#EF4444',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    tension: 0.4
+                }, {
+                    label: '완료된 할 일',
+                    data: productivityStats.daily_productivity.map(day => day.completed),
+                    borderColor: '#10B981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4
+                }, {
+                    label: '순 생산성',
+                    data: productivityStats.daily_productivity.map(day => day.net_productivity),
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '일별 생산성 추이'
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('생산성 통계 로드 실패:', error);
+    }
+}
+
+async function loadCompletionStats() {
+    try {
+        const completionStats = await apiCall('/stats/completion-time');
+        
+        if (completionStats.message) {
+            document.getElementById('avgCompletionTime').textContent = '데이터 없음';
+            document.getElementById('totalCompletedForTime').textContent = '0';
+            document.getElementById('completionTimeDetails').innerHTML = '<p>완료된 할 일이 없습니다.</p>';
+            return;
+        }
+        
+        document.getElementById('avgCompletionTime').textContent = `${completionStats.avg_completion_hours}시간`;
+        document.getElementById('totalCompletedForTime').textContent = completionStats.total_completed;
+        
+        // 완료 시간 상세 정보
+        const completionDetails = document.getElementById('completionTimeDetails');
+        completionDetails.innerHTML = '';
+        
+        completionStats.completion_details.forEach(detail => {
+            const completionItem = document.createElement('div');
+            completionItem.className = 'completion-item';
+            completionItem.innerHTML = `
+                <div class="todo-info">
+                    <div class="todo-title">${detail.title}</div>
+                    <div class="todo-category">${detail.category}</div>
+                </div>
+                <div class="completion-time">${detail.completion_hours}시간</div>
+            `;
+            completionDetails.appendChild(completionItem);
+        });
+    } catch (error) {
+        console.error('완료 시간 통계 로드 실패:', error);
+    }
+}
+
+// 우선순위 및 마감일 관련 유틸리티 함수들
+function getPriorityClass(priority) {
+    switch(priority) {
+        case '높음': return 'priority-high';
+        case '보통': return 'priority-medium';
+        case '낮음': return 'priority-low';
+        default: return 'priority-medium';
+    }
+}
+
+function getUrgencyClass(todo) {
+    if (isOverdue(todo)) return 'overdue';
+    if (isUrgent(todo)) return 'urgent';
+    return '';
+}
+
+function isUrgent(todo) {
+    if (!todo.due_date || todo.completed) return false;
+    const today = new Date();
+    const dueDate = new Date(todo.due_date);
+    const diffTime = dueDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= 3;
+}
+
+function isOverdue(todo) {
+    if (!todo.due_date || todo.completed) return false;
+    const today = new Date();
+    const dueDate = new Date(todo.due_date);
+    return dueDate < today;
+}
+
+function getDueDateHtml(todo) {
+    if (!todo.due_date) return '';
+    
+    const today = new Date();
+    const dueDate = new Date(todo.due_date);
+    const diffTime = dueDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    let dueDateClass = '';
+    let dueDateText = '';
+    
+    if (diffDays < 0) {
+        dueDateClass = 'overdue';
+        dueDateText = `${Math.abs(diffDays)}일 지연`;
+    } else if (diffDays === 0) {
+        dueDateClass = 'urgent';
+        dueDateText = '오늘 마감';
+    } else if (diffDays <= 3) {
+        dueDateClass = 'urgent';
+        dueDateText = `${diffDays}일 후 마감`;
+    } else {
+        dueDateClass = 'warning';
+        dueDateText = `${diffDays}일 후 마감`;
+    }
+    
+    return `<span class="due-date ${dueDateClass}">${dueDateText}</span>`;
 }
 
