@@ -86,6 +86,9 @@
             <button id="clearAllBtn" class="btn btn-danger">
                 전체 삭제
             </button>
+            <button id="showStatsBtn" class="btn btn-primary">
+                📊 통계 보기
+            </button>
         </div>
     </div>
 
@@ -115,6 +118,106 @@
         </div>
     </div>
 
+    <!-- 통계 모달 -->
+    <div id="statsModal" class="modal">
+        <div class="modal-content stats-modal">
+            <div class="modal-header">
+                <h3>📊 생산성 통계</h3>
+                <button class="close-btn" id="closeStatsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- 통계 탭 -->
+                <div class="stats-tabs">
+                    <button class="stats-tab active" data-tab="overview">개요</button>
+                    <button class="stats-tab" data-tab="daily">일별</button>
+                    <button class="stats-tab" data-tab="weekly">주별</button>
+                    <button class="stats-tab" data-tab="productivity">생산성</button>
+                    <button class="stats-tab" data-tab="completion">완료시간</button>
+                </div>
+
+                <!-- 개요 탭 -->
+                <div id="overview-tab" class="stats-tab-content active">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h4>전체 할 일</h4>
+                            <div class="stat-number" id="totalTodos">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>완료된 할 일</h4>
+                            <div class="stat-number" id="completedTodos">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>진행중인 할 일</h4>
+                            <div class="stat-number" id="activeTodos">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>완료율</h4>
+                            <div class="stat-number" id="completionRate">0%</div>
+                        </div>
+                    </div>
+                    <div class="category-stats">
+                        <h4>카테고리별 통계</h4>
+                        <div id="categoryStatsList"></div>
+                    </div>
+                </div>
+
+                <!-- 일별 탭 -->
+                <div id="daily-tab" class="stats-tab-content">
+                    <h4>최근 7일 완료 현황</h4>
+                    <canvas id="dailyChart" width="400" height="200"></canvas>
+                    <div id="dailyStatsList"></div>
+                </div>
+
+                <!-- 주별 탭 -->
+                <div id="weekly-tab" class="stats-tab-content">
+                    <h4>최근 4주 완료 현황</h4>
+                    <canvas id="weeklyChart" width="400" height="200"></canvas>
+                    <div id="weeklyStatsList"></div>
+                </div>
+
+                <!-- 생산성 탭 -->
+                <div id="productivity-tab" class="stats-tab-content">
+                    <h4>생산성 분석 (최근 30일)</h4>
+                    <div class="productivity-metrics">
+                        <div class="metric">
+                            <span class="metric-label">생산성 지수:</span>
+                            <span class="metric-value" id="productivityRate">0%</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">생성된 할 일:</span>
+                            <span class="metric-value" id="totalCreated">0</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">완료된 할 일:</span>
+                            <span class="metric-value" id="totalCompleted">0</span>
+                        </div>
+                    </div>
+                    <canvas id="productivityChart" width="400" height="200"></canvas>
+                </div>
+
+                <!-- 완료시간 탭 -->
+                <div id="completion-tab" class="stats-tab-content">
+                    <h4>완료 시간 분석</h4>
+                    <div class="completion-metrics">
+                        <div class="metric">
+                            <span class="metric-label">평균 완료 시간:</span>
+                            <span class="metric-value" id="avgCompletionTime">0시간</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">완료된 할 일:</span>
+                            <span class="metric-value" id="totalCompletedForTime">0</span>
+                        </div>
+                    </div>
+                    <div id="completionTimeDetails"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="closeStatsBtn">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

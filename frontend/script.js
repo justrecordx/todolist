@@ -23,6 +23,14 @@ const saveCategory = document.getElementById('saveCategory');
 const newCategoryName = document.getElementById('newCategoryName');
 const newCategoryColor = document.getElementById('newCategoryColor');
 
+// 통계 모달 관련 요소
+const statsModal = document.getElementById('statsModal');
+const showStatsBtn = document.getElementById('showStatsBtn');
+const closeStatsModal = document.getElementById('closeStatsModal');
+const closeStatsBtn = document.getElementById('closeStatsBtn');
+const statsTabs = document.querySelectorAll('.stats-tab');
+const statsTabContents = document.querySelectorAll('.stats-tab-content');
+
 // 통계 요소
 const totalCount = document.getElementById('totalCount');
 const activeCount = document.getElementById('activeCount');
@@ -92,6 +100,26 @@ function setupEventListeners() {
     categoryModal.addEventListener('click', (e) => {
         if (e.target === categoryModal) {
             hideCategoryModal();
+        }
+    });
+
+    // 통계 모달 이벤트
+    showStatsBtn.addEventListener('click', showStatsModal);
+    closeStatsModal.addEventListener('click', hideStatsModal);
+    closeStatsBtn.addEventListener('click', hideStatsModal);
+
+    // 통계 탭 이벤트
+    statsTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabName = tab.dataset.tab;
+            switchStatsTab(tabName);
+        });
+    });
+
+    // 통계 모달 외부 클릭시 닫기
+    statsModal.addEventListener('click', (e) => {
+        if (e.target === statsModal) {
+            hideStatsModal();
         }
     });
 }
@@ -486,6 +514,270 @@ async function handleSaveCategory() {
         showNotification('새 카테고리가 추가되었습니다! 🏷️');
     } catch (error) {
         console.error('카테고리 추가 실패:', error);
+    }
+}
+
+// 통계 관련 함수들
+function showStatsModal() {
+    statsModal.style.display = 'block';
+    loadOverviewStats();
+}
+
+function hideStatsModal() {
+    statsModal.style.display = 'none';
+}
+
+function switchStatsTab(tabName) {
+    // 모든 탭 비활성화
+    statsTabs.forEach(tab => tab.classList.remove('active'));
+    statsTabContents.forEach(content => content.classList.remove('active'));
+    
+    // 선택된 탭 활성화
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    document.getElementById(`${tabName}-tab`).classList.add('active');
+    
+    // 해당 탭 데이터 로드
+    switch(tabName) {
+        case 'overview':
+            loadOverviewStats();
+            break;
+        case 'daily':
+            loadDailyStats();
+            break;
+        case 'weekly':
+            loadWeeklyStats();
+            break;
+        case 'productivity':
+            loadProductivityStats();
+            break;
+        case 'completion':
+            loadCompletionStats();
+            break;
+    }
+}
+
+async function loadOverviewStats() {
+    try {
+        const stats = await apiCall('/stats/overview');
+        
+        document.getElementById('totalTodos').textContent = stats.total_todos;
+        document.getElementById('completedTodos').textContent = stats.completed_todos;
+        document.getElementById('activeTodos').textContent = stats.active_todos;
+        document.getElementById('completionRate').textContent = `${stats.overall_completion_rate}%`;
+        
+        // 카테고리별 통계
+        const categoryStatsList = document.getElementById('categoryStatsList');
+        categoryStatsList.innerHTML = '';
+        
+        for (const [categoryName, categoryStats] of Object.entries(stats.category_stats)) {
+            const categoryItem = document.createElement('div');
+            categoryItem.className = 'category-stat-item';
+            categoryItem.innerHTML = `
+                <div class="category-name">${categoryName}</div>
+                <div class="category-numbers">
+                    <span>전체: ${categoryStats.total}</span>
+                    <span>완료: ${categoryStats.completed}</span>
+                    <span>완료율: ${categoryStats.completion_rate}%</span>
+                </div>
+            `;
+            categoryStatsList.appendChild(categoryItem);
+        }
+    } catch (error) {
+        console.error('개요 통계 로드 실패:', error);
+    }
+}
+
+async function loadDailyStats() {
+    try {
+        const dailyStats = await apiCall('/stats/daily?days=7');
+        
+        // 차트 생성
+        const ctx = document.getElementById('dailyChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dailyStats.map(stat => stat.date),
+                datasets: [{
+                    label: '완료된 할 일',
+                    data: dailyStats.map(stat => stat.completed),
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4
+                }, {
+                    label: '생성된 할 일',
+                    data: dailyStats.map(stat => stat.created),
+                    borderColor: '#10B981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '일별 할 일 현황'
+                    }
+                }
+            }
+        });
+        
+        // 상세 통계 표시
+        const dailyStatsList = document.getElementById('dailyStatsList');
+        dailyStatsList.innerHTML = '';
+        
+        dailyStats.forEach(stat => {
+            const statItem = document.createElement('div');
+            statItem.className = 'daily-stats-item';
+            statItem.innerHTML = `
+                <div class="date">${stat.date}</div>
+                <div class="numbers">
+                    <span>생성: ${stat.created}</span>
+                    <span>완료: ${stat.completed}</span>
+                    <span>완료율: ${stat.completion_rate}%</span>
+                </div>
+            `;
+            dailyStatsList.appendChild(statItem);
+        });
+    } catch (error) {
+        console.error('일별 통계 로드 실패:', error);
+    }
+}
+
+async function loadWeeklyStats() {
+    try {
+        const weeklyStats = await apiCall('/stats/weekly?weeks=4');
+        
+        // 차트 생성
+        const ctx = document.getElementById('weeklyChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: weeklyStats.map(stat => stat.week),
+                datasets: [{
+                    label: '완료된 할 일',
+                    data: weeklyStats.map(stat => stat.completed),
+                    backgroundColor: '#3B82F6'
+                }, {
+                    label: '생성된 할 일',
+                    data: weeklyStats.map(stat => stat.created),
+                    backgroundColor: '#10B981'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '주별 할 일 현황'
+                    }
+                }
+            }
+        });
+        
+        // 상세 통계 표시
+        const weeklyStatsList = document.getElementById('weeklyStatsList');
+        weeklyStatsList.innerHTML = '';
+        
+        weeklyStats.forEach(stat => {
+            const statItem = document.createElement('div');
+            statItem.className = 'weekly-stats-item';
+            statItem.innerHTML = `
+                <div class="week">${stat.week}</div>
+                <div class="numbers">
+                    <span>생성: ${stat.created}</span>
+                    <span>완료: ${stat.completed}</span>
+                    <span>완료율: ${stat.completion_rate}%</span>
+                </div>
+            `;
+            weeklyStatsList.appendChild(statItem);
+        });
+    } catch (error) {
+        console.error('주별 통계 로드 실패:', error);
+    }
+}
+
+async function loadProductivityStats() {
+    try {
+        const productivityStats = await apiCall('/stats/productivity');
+        
+        document.getElementById('productivityRate').textContent = `${productivityStats.productivity_rate}%`;
+        document.getElementById('totalCreated').textContent = productivityStats.total_created;
+        document.getElementById('totalCompleted').textContent = productivityStats.total_completed;
+        
+        // 생산성 차트 생성
+        const ctx = document.getElementById('productivityChart').getContext('2d');
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: productivityStats.daily_productivity.map(day => day.date),
+                datasets: [{
+                    label: '생성된 할 일',
+                    data: productivityStats.daily_productivity.map(day => day.created),
+                    borderColor: '#EF4444',
+                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                    tension: 0.4
+                }, {
+                    label: '완료된 할 일',
+                    data: productivityStats.daily_productivity.map(day => day.completed),
+                    borderColor: '#10B981',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    tension: 0.4
+                }, {
+                    label: '순 생산성',
+                    data: productivityStats.daily_productivity.map(day => day.net_productivity),
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '일별 생산성 추이'
+                    }
+                }
+            }
+        });
+    } catch (error) {
+        console.error('생산성 통계 로드 실패:', error);
+    }
+}
+
+async function loadCompletionStats() {
+    try {
+        const completionStats = await apiCall('/stats/completion-time');
+        
+        if (completionStats.message) {
+            document.getElementById('avgCompletionTime').textContent = '데이터 없음';
+            document.getElementById('totalCompletedForTime').textContent = '0';
+            document.getElementById('completionTimeDetails').innerHTML = '<p>완료된 할 일이 없습니다.</p>';
+            return;
+        }
+        
+        document.getElementById('avgCompletionTime').textContent = `${completionStats.avg_completion_hours}시간`;
+        document.getElementById('totalCompletedForTime').textContent = completionStats.total_completed;
+        
+        // 완료 시간 상세 정보
+        const completionDetails = document.getElementById('completionTimeDetails');
+        completionDetails.innerHTML = '';
+        
+        completionStats.completion_details.forEach(detail => {
+            const completionItem = document.createElement('div');
+            completionItem.className = 'completion-item';
+            completionItem.innerHTML = `
+                <div class="todo-info">
+                    <div class="todo-title">${detail.title}</div>
+                    <div class="todo-category">${detail.category}</div>
+                </div>
+                <div class="completion-time">${detail.completion_hours}시간</div>
+            `;
+            completionDetails.appendChild(completionItem);
+        });
+    } catch (error) {
+        console.error('완료 시간 통계 로드 실패:', error);
     }
 }
 
