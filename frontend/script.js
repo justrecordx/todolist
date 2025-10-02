@@ -4,6 +4,9 @@ const API_BASE_URL = 'http://localhost:8000/api';
 // DOM 요소 가져오기
 const todoTitleInput = document.getElementById('todoTitle');
 const todoDescriptionInput = document.getElementById('todoDescription');
+const todoCategorySelect = document.getElementById('todoCategory');
+const addCategoryBtn = document.getElementById('addCategoryBtn');
+const categoryFilterSelect = document.getElementById('categoryFilter');
 const addBtn = document.getElementById('addBtn');
 const todoList = document.getElementById('todoList');
 const emptyState = document.getElementById('emptyState');
@@ -11,6 +14,14 @@ const loadingSpinner = document.getElementById('loadingSpinner');
 const notification = document.getElementById('notification');
 const clearCompletedBtn = document.getElementById('clearCompletedBtn');
 const clearAllBtn = document.getElementById('clearAllBtn');
+
+// 모달 관련 요소
+const categoryModal = document.getElementById('categoryModal');
+const closeModal = document.getElementById('closeModal');
+const cancelCategory = document.getElementById('cancelCategory');
+const saveCategory = document.getElementById('saveCategory');
+const newCategoryName = document.getElementById('newCategoryName');
+const newCategoryColor = document.getElementById('newCategoryColor');
 
 // 통계 요소
 const totalCount = document.getElementById('totalCount');
@@ -22,11 +33,14 @@ const filterButtons = document.querySelectorAll('.filter-btn');
 
 // 전역 상태
 let todos = [];
+let categories = [];
 let currentFilter = 'all';
+let currentCategoryFilter = 'all';
 
 // 초기화
 document.addEventListener('DOMContentLoaded', () => {
     console.log('TodoList 앱 초기화...');
+    loadCategories();
     loadTodos();
     setupEventListeners();
 });
@@ -56,6 +70,29 @@ function setupEventListeners() {
             currentFilter = btn.dataset.filter;
             renderTodos();
         });
+    });
+
+    // 카테고리 필터
+    categoryFilterSelect.addEventListener('change', () => {
+        currentCategoryFilter = categoryFilterSelect.value;
+        renderTodos();
+    });
+
+    // 카테고리 추가 버튼
+    addCategoryBtn.addEventListener('click', () => {
+        showCategoryModal();
+    });
+
+    // 모달 이벤트
+    closeModal.addEventListener('click', hideCategoryModal);
+    cancelCategory.addEventListener('click', hideCategoryModal);
+    saveCategory.addEventListener('click', handleSaveCategory);
+
+    // 모달 외부 클릭시 닫기
+    categoryModal.addEventListener('click', (e) => {
+        if (e.target === categoryModal) {
+            hideCategoryModal();
+        }
     });
 }
 
@@ -91,6 +128,16 @@ async function apiCall(endpoint, method = 'GET', data = null) {
     }
 }
 
+// 모든 카테고리 불러오기
+async function loadCategories() {
+    try {
+        categories = await apiCall('/categories');
+        updateCategorySelects();
+    } catch (error) {
+        console.error('카테고리 목록 불러오기 실패:', error);
+    }
+}
+
 // 모든 할 일 불러오기
 async function loadTodos() {
     try {
@@ -106,6 +153,7 @@ async function loadTodos() {
 async function handleAddTodo() {
     const title = todoTitleInput.value.trim();
     const description = todoDescriptionInput.value.trim();
+    const category = todoCategorySelect.value;
 
     if (!title) {
         showNotification('할 일 제목을 입력해주세요!', 'error');
@@ -117,6 +165,7 @@ async function handleAddTodo() {
         const newTodo = await apiCall('/todos', 'POST', {
             title,
             description,
+            category,
             completed: false
         });
 
@@ -256,10 +305,17 @@ async function handleClearAll() {
 function renderTodos() {
     // 필터링
     let filteredTodos = todos;
+    
+    // 상태 필터링
     if (currentFilter === 'active') {
-        filteredTodos = todos.filter(t => !t.completed);
+        filteredTodos = filteredTodos.filter(t => !t.completed);
     } else if (currentFilter === 'completed') {
-        filteredTodos = todos.filter(t => t.completed);
+        filteredTodos = filteredTodos.filter(t => t.completed);
+    }
+    
+    // 카테고리 필터링
+    if (currentCategoryFilter !== 'all') {
+        filteredTodos = filteredTodos.filter(t => t.category === currentCategoryFilter);
     }
 
     // 빈 상태 처리
@@ -281,7 +337,10 @@ function renderTodos() {
                 onchange="handleToggleTodo(${todo.id})"
             >
             <div class="todo-content" onclick="handleToggleTodo(${todo.id})">
-                <div class="todo-title">${escapeHtml(todo.title)}</div>
+                <div class="todo-title">
+                    ${escapeHtml(todo.title)}
+                    <span class="category-badge ${todo.category || '기본'}">${todo.category || '기본'}</span>
+                </div>
                 ${todo.description ? `<div class="todo-description">${escapeHtml(todo.description)}</div>` : ''}
                 ${todo.created_at ? `<div class="todo-meta">생성: ${formatDate(todo.created_at)}</div>` : ''}
             </div>
@@ -361,5 +420,72 @@ function formatDate(dateString) {
         hour: '2-digit',
         minute: '2-digit'
     });
+}
+
+// 카테고리 관련 함수들
+function updateCategorySelects() {
+    // 할 일 추가용 카테고리 선택
+    todoCategorySelect.innerHTML = '';
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.name;
+        option.textContent = category.name;
+        option.style.color = category.color;
+        todoCategorySelect.appendChild(option);
+    });
+
+    // 필터용 카테고리 선택
+    categoryFilterSelect.innerHTML = '<option value="all">모든 카테고리</option>';
+    categories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category.name;
+        option.textContent = category.name;
+        option.style.color = category.color;
+        categoryFilterSelect.appendChild(option);
+    });
+}
+
+function showCategoryModal() {
+    categoryModal.style.display = 'block';
+    newCategoryName.value = '';
+    newCategoryColor.value = '#3B82F6';
+    newCategoryName.focus();
+}
+
+function hideCategoryModal() {
+    categoryModal.style.display = 'none';
+}
+
+async function handleSaveCategory() {
+    const name = newCategoryName.value.trim();
+    const color = newCategoryColor.value;
+
+    if (!name) {
+        showNotification('카테고리 이름을 입력해주세요!', 'error');
+        newCategoryName.focus();
+        return;
+    }
+
+    // 중복 체크
+    if (categories.some(cat => cat.name === name)) {
+        showNotification('이미 존재하는 카테고리입니다!', 'error');
+        newCategoryName.focus();
+        return;
+    }
+
+    try {
+        const newCategory = await apiCall('/categories', 'POST', {
+            name,
+            color
+        });
+
+        categories.push(newCategory);
+        updateCategorySelects();
+        hideCategoryModal();
+
+        showNotification('새 카테고리가 추가되었습니다! 🏷️');
+    } catch (error) {
+        console.error('카테고리 추가 실패:', error);
+    }
 }
 

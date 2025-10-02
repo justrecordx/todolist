@@ -26,10 +26,38 @@ class TodoItem(BaseModel):
     description: Optional[str] = ""
     completed: bool = False
     created_at: Optional[str] = None
+    category: Optional[str] = "기본"
+
+class Category(BaseModel):
+    id: Optional[int] = None
+    name: str
+    color: Optional[str] = "#3B82F6"
+    created_at: Optional[str] = None
 
 # 메모리 내 데이터베이스 (실제로는 PostgreSQL, MongoDB 등 사용)
 todos_db: List[TodoItem] = []
+categories_db: List[Category] = []
 next_id = 1
+next_category_id = 1
+
+# 기본 카테고리 초기화
+default_categories = [
+    {"name": "기본", "color": "#3B82F6"},
+    {"name": "업무", "color": "#EF4444"},
+    {"name": "개인", "color": "#10B981"},
+    {"name": "쇼핑", "color": "#F59E0B"},
+    {"name": "학습", "color": "#8B5CF6"}
+]
+
+for cat_data in default_categories:
+    category = Category(
+        id=next_category_id,
+        name=cat_data["name"],
+        color=cat_data["color"],
+        created_at=datetime.now().isoformat()
+    )
+    categories_db.append(category)
+    next_category_id += 1
 
 @app.get("/")
 async def read_root():
@@ -97,6 +125,43 @@ async def delete_all_todos():
     todos_db = []
     next_id = 1
     return {"message": f"{count}개의 할 일이 모두 삭제되었습니다."}
+
+# 카테고리 관리 API
+@app.get("/api/categories", response_model=List[Category])
+async def get_categories():
+    """모든 카테고리 조회"""
+    return categories_db
+
+@app.post("/api/categories", response_model=Category)
+async def create_category(category: Category):
+    """새로운 카테고리 생성"""
+    global next_category_id
+    category.id = next_category_id
+    category.created_at = datetime.now().isoformat()
+    categories_db.append(category)
+    next_category_id += 1
+    return category
+
+@app.get("/api/todos/category/{category_name}", response_model=List[TodoItem])
+async def get_todos_by_category(category_name: str):
+    """특정 카테고리의 할 일 목록 조회"""
+    return [todo for todo in todos_db if todo.category == category_name]
+
+@app.get("/api/todos/category/{category_name}/stats")
+async def get_category_stats(category_name: str):
+    """카테고리별 통계"""
+    category_todos = [todo for todo in todos_db if todo.category == category_name]
+    total = len(category_todos)
+    completed = len([todo for todo in category_todos if todo.completed])
+    active = total - completed
+    
+    return {
+        "category": category_name,
+        "total": total,
+        "completed": completed,
+        "active": active,
+        "completion_rate": round((completed / total * 100) if total > 0 else 0, 1)
+    }
 
 if __name__ == "__main__":
     import uvicorn
