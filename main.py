@@ -29,6 +29,8 @@ class TodoItem(BaseModel):
     created_at: Optional[str] = None
     completed_at: Optional[str] = None
     category: Optional[str] = "기본"
+    priority: Optional[str] = "보통"  # 높음, 보통, 낮음
+    due_date: Optional[str] = None  # YYYY-MM-DD 형식
 
 class Category(BaseModel):
     id: Optional[int] = None
@@ -358,6 +360,78 @@ async def get_productivity_stats():
         "productivity_rate": productivity_rate,
         "daily_productivity": daily_productivity
     }
+
+# 우선순위 및 마감일 관리 API
+@app.get("/api/sort-todos")
+async def get_todos_sorted(sort_by: str = "priority"):
+    """우선순위별 또는 마감일별 정렬된 할 일 목록"""
+    sorted_todos = todos_db.copy()
+    
+    if sort_by == "priority":
+        priority_order = {"높음": 1, "보통": 2, "낮음": 3}
+        sorted_todos.sort(key=lambda x: (
+            priority_order.get(x.priority, 2),  # 우선순위
+            x.due_date or "9999-12-31"  # 마감일 (없으면 마지막)
+        ))
+    elif sort_by == "due_date":
+        sorted_todos.sort(key=lambda x: (
+            x.due_date or "9999-12-31",  # 마감일
+            {"높음": 1, "보통": 2, "낮음": 3}.get(x.priority, 2)  # 우선순위
+        ))
+    elif sort_by == "created":
+        sorted_todos.sort(key=lambda x: x.created_at or "", reverse=True)
+    
+    return sorted_todos
+
+@app.get("/api/todos/urgent")
+async def get_urgent_todos():
+    """마감일이 임박한 할 일 목록 (3일 이내)"""
+    today = datetime.now().date()
+    urgent_todos = []
+    
+    for todo in todos_db:
+        if todo.due_date and not todo.completed:
+            due_date = datetime.strptime(todo.due_date, "%Y-%m-%d").date()
+            days_until_due = (due_date - today).days
+            
+            if 0 <= days_until_due <= 3:  # 3일 이내
+                urgent_todos.append({
+                    **todo.dict(),
+                    "days_until_due": days_until_due,
+                    "is_overdue": days_until_due < 0
+                })
+    
+    # 마감일 순으로 정렬
+    urgent_todos.sort(key=lambda x: x["due_date"])
+    return urgent_todos
+
+@app.get("/api/todos/priority/{priority}")
+async def get_todos_by_priority(priority: str):
+    """특정 우선순위의 할 일 목록"""
+    if priority not in ["높음", "보통", "낮음"]:
+        raise HTTPException(status_code=400, detail="유효하지 않은 우선순위입니다.")
+    
+    return [todo for todo in todos_db if todo.priority == priority]
+
+@app.get("/api/todos/overdue")
+async def get_overdue_todos():
+    """마감일이 지난 미완료 할 일 목록"""
+    today = datetime.now().date()
+    overdue_todos = []
+    
+    for todo in todos_db:
+        if todo.due_date and not todo.completed:
+            due_date = datetime.strptime(todo.due_date, "%Y-%m-%d").date()
+            if due_date < today:
+                days_overdue = (today - due_date).days
+                overdue_todos.append({
+                    **todo.dict(),
+                    "days_overdue": days_overdue
+                })
+    
+    # 지난 일수 순으로 정렬
+    overdue_todos.sort(key=lambda x: x["days_overdue"], reverse=True)
+    return overdue_todos
 
 if __name__ == "__main__":
     import uvicorn

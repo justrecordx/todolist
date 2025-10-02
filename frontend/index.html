@@ -31,6 +31,18 @@
                     placeholder="상세 설명 (선택사항)"
                     autocomplete="off"
                 >
+                <div class="priority-due-section">
+                    <div class="priority-selector">
+                        <select id="todoPriority" class="priority-select">
+                            <option value="보통">보통</option>
+                            <option value="높음">높음</option>
+                            <option value="낮음">낮음</option>
+                        </select>
+                    </div>
+                    <div class="due-date-selector">
+                        <input type="date" id="todoDueDate" class="due-date-input" placeholder="마감일">
+                    </div>
+                </div>
                 <div class="category-selector">
                     <select id="todoCategory" class="category-select">
                         <option value="기본">기본</option>
@@ -57,11 +69,30 @@
                     <button class="filter-btn active" data-filter="all">전체</button>
                     <button class="filter-btn" data-filter="active">진행중</button>
                     <button class="filter-btn" data-filter="completed">완료</button>
+                    <button class="filter-btn" data-filter="urgent">임박</button>
+                    <button class="filter-btn" data-filter="overdue">지연</button>
                 </div>
-                <div class="category-filter">
-                    <select id="categoryFilter" class="category-filter-select">
-                        <option value="all">모든 카테고리</option>
-                    </select>
+                <div class="filter-selectors">
+                    <div class="category-filter">
+                        <select id="categoryFilter" class="category-filter-select">
+                            <option value="all">모든 카테고리</option>
+                        </select>
+                    </div>
+                    <div class="priority-filter">
+                        <select id="priorityFilter" class="priority-filter-select">
+                            <option value="all">모든 우선순위</option>
+                            <option value="높음">높음</option>
+                            <option value="보통">보통</option>
+                            <option value="낮음">낮음</option>
+                        </select>
+                    </div>
+                    <div class="sort-filter">
+                        <select id="sortFilter" class="sort-filter-select">
+                            <option value="created">생성일순</option>
+                            <option value="priority">우선순위순</option>
+                            <option value="due_date">마감일순</option>
+                        </select>
+                    </div>
                 </div>
             </div>
         </div>

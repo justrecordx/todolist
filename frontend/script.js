@@ -4,9 +4,13 @@ const API_BASE_URL = 'http://localhost:8000/api';
 // DOM 요소 가져오기
 const todoTitleInput = document.getElementById('todoTitle');
 const todoDescriptionInput = document.getElementById('todoDescription');
+const todoPrioritySelect = document.getElementById('todoPriority');
+const todoDueDateInput = document.getElementById('todoDueDate');
 const todoCategorySelect = document.getElementById('todoCategory');
 const addCategoryBtn = document.getElementById('addCategoryBtn');
 const categoryFilterSelect = document.getElementById('categoryFilter');
+const priorityFilterSelect = document.getElementById('priorityFilter');
+const sortFilterSelect = document.getElementById('sortFilter');
 const addBtn = document.getElementById('addBtn');
 const todoList = document.getElementById('todoList');
 const emptyState = document.getElementById('emptyState');
@@ -44,6 +48,8 @@ let todos = [];
 let categories = [];
 let currentFilter = 'all';
 let currentCategoryFilter = 'all';
+let currentPriorityFilter = 'all';
+let currentSort = 'created';
 
 // 초기화
 document.addEventListener('DOMContentLoaded', () => {
@@ -84,6 +90,18 @@ function setupEventListeners() {
     categoryFilterSelect.addEventListener('change', () => {
         currentCategoryFilter = categoryFilterSelect.value;
         renderTodos();
+    });
+
+    // 우선순위 필터
+    priorityFilterSelect.addEventListener('change', () => {
+        currentPriorityFilter = priorityFilterSelect.value;
+        renderTodos();
+    });
+
+    // 정렬 필터
+    sortFilterSelect.addEventListener('change', () => {
+        currentSort = sortFilterSelect.value;
+        loadTodos();
     });
 
     // 카테고리 추가 버튼
@@ -169,7 +187,11 @@ async function loadCategories() {
 // 모든 할 일 불러오기
 async function loadTodos() {
     try {
-        todos = await apiCall('/todos');
+        if (currentSort === 'created') {
+            todos = await apiCall('/todos');
+        } else {
+            todos = await apiCall(`/sort-todos?sort_by=${currentSort}`);
+        }
         renderTodos();
         updateStats();
     } catch (error) {
@@ -182,6 +204,8 @@ async function handleAddTodo() {
     const title = todoTitleInput.value.trim();
     const description = todoDescriptionInput.value.trim();
     const category = todoCategorySelect.value;
+    const priority = todoPrioritySelect.value;
+    const dueDate = todoDueDateInput.value;
 
     if (!title) {
         showNotification('할 일 제목을 입력해주세요!', 'error');
@@ -194,6 +218,8 @@ async function handleAddTodo() {
             title,
             description,
             category,
+            priority,
+            due_date: dueDate || null,
             completed: false
         });
 
@@ -204,6 +230,7 @@ async function handleAddTodo() {
         // 입력 필드 초기화
         todoTitleInput.value = '';
         todoDescriptionInput.value = '';
+        todoDueDateInput.value = '';
         todoTitleInput.focus();
 
         showNotification('할 일이 추가되었습니다! ✅');
@@ -339,11 +366,20 @@ function renderTodos() {
         filteredTodos = filteredTodos.filter(t => !t.completed);
     } else if (currentFilter === 'completed') {
         filteredTodos = filteredTodos.filter(t => t.completed);
+    } else if (currentFilter === 'urgent') {
+        filteredTodos = filteredTodos.filter(t => isUrgent(t));
+    } else if (currentFilter === 'overdue') {
+        filteredTodos = filteredTodos.filter(t => isOverdue(t));
     }
     
     // 카테고리 필터링
     if (currentCategoryFilter !== 'all') {
         filteredTodos = filteredTodos.filter(t => t.category === currentCategoryFilter);
+    }
+    
+    // 우선순위 필터링
+    if (currentPriorityFilter !== 'all') {
+        filteredTodos = filteredTodos.filter(t => t.priority === currentPriorityFilter);
     }
 
     // 빈 상태 처리
@@ -356,8 +392,13 @@ function renderTodos() {
     emptyState.classList.add('hidden');
 
     // 할 일 목록 렌더링
-    todoList.innerHTML = filteredTodos.map(todo => `
-        <li class="todo-item ${todo.completed ? 'completed' : ''}" data-id="${todo.id}">
+    todoList.innerHTML = filteredTodos.map(todo => {
+        const priorityClass = getPriorityClass(todo.priority);
+        const urgencyClass = getUrgencyClass(todo);
+        const dueDateHtml = getDueDateHtml(todo);
+        
+        return `
+        <li class="todo-item ${todo.completed ? 'completed' : ''} ${priorityClass} ${urgencyClass}" data-id="${todo.id}">
             <input 
                 type="checkbox" 
                 class="todo-checkbox" 
@@ -368,6 +409,8 @@ function renderTodos() {
                 <div class="todo-title">
                     ${escapeHtml(todo.title)}
                     <span class="category-badge ${todo.category || '기본'}">${todo.category || '기본'}</span>
+                    <span class="priority-badge ${todo.priority || '보통'}">${todo.priority || '보통'}</span>
+                    ${dueDateHtml}
                 </div>
                 ${todo.description ? `<div class="todo-description">${escapeHtml(todo.description)}</div>` : ''}
                 ${todo.created_at ? `<div class="todo-meta">생성: ${formatDate(todo.created_at)}</div>` : ''}
@@ -381,7 +424,8 @@ function renderTodos() {
                 </button>
             </div>
         </li>
-    `).join('');
+        `;
+    }).join('');
 }
 
 // 통계 업데이트
@@ -779,5 +823,65 @@ async function loadCompletionStats() {
     } catch (error) {
         console.error('완료 시간 통계 로드 실패:', error);
     }
+}
+
+// 우선순위 및 마감일 관련 유틸리티 함수들
+function getPriorityClass(priority) {
+    switch(priority) {
+        case '높음': return 'priority-high';
+        case '보통': return 'priority-medium';
+        case '낮음': return 'priority-low';
+        default: return 'priority-medium';
+    }
+}
+
+function getUrgencyClass(todo) {
+    if (isOverdue(todo)) return 'overdue';
+    if (isUrgent(todo)) return 'urgent';
+    return '';
+}
+
+function isUrgent(todo) {
+    if (!todo.due_date || todo.completed) return false;
+    const today = new Date();
+    const dueDate = new Date(todo.due_date);
+    const diffTime = dueDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= 3;
+}
+
+function isOverdue(todo) {
+    if (!todo.due_date || todo.completed) return false;
+    const today = new Date();
+    const dueDate = new Date(todo.due_date);
+    return dueDate < today;
+}
+
+function getDueDateHtml(todo) {
+    if (!todo.due_date) return '';
+    
+    const today = new Date();
+    const dueDate = new Date(todo.due_date);
+    const diffTime = dueDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    let dueDateClass = '';
+    let dueDateText = '';
+    
+    if (diffDays < 0) {
+        dueDateClass = 'overdue';
+        dueDateText = `${Math.abs(diffDays)}일 지연`;
+    } else if (diffDays === 0) {
+        dueDateClass = 'urgent';
+        dueDateText = '오늘 마감';
+    } else if (diffDays <= 3) {
+        dueDateClass = 'urgent';
+        dueDateText = `${diffDays}일 후 마감`;
+    } else {
+        dueDateClass = 'warning';
+        dueDateText = `${diffDays}일 후 마감`;
+    }
+    
+    return `<span class="due-date ${dueDateClass}">${dueDateText}</span>`;
 }
 

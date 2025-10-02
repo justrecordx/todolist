@@ -447,6 +447,42 @@ body {
     }
 }
 
+/* 우선순위 및 마감일 관련 스타일 */
+.priority-due-section {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.priority-selector,
+.due-date-selector {
+    flex: 1;
+}
+
+.priority-select,
+.due-date-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border-color);
+    border-radius: var(--border-radius);
+    font-size: 14px;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.priority-select:focus,
+.due-date-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.due-date-input {
+    cursor: text;
+}
+
 /* 카테고리 관련 스타일 */
 .category-selector {
     display: flex;
@@ -480,7 +516,19 @@ body {
 
 .filter-controls {
     display: flex;
+    flex-direction: column;
     gap: 16px;
+}
+
+.filter-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.filter-selectors {
+    display: flex;
+    gap: 12px;
     align-items: center;
     flex-wrap: wrap;
 }
@@ -490,7 +538,9 @@ body {
     align-items: center;
 }
 
-.category-filter-select {
+.category-filter-select,
+.priority-filter-select,
+.sort-filter-select {
     padding: 8px 12px;
     border: 2px solid var(--border-color);
     border-radius: 8px;
@@ -501,10 +551,18 @@ body {
     cursor: pointer;
 }
 
-.category-filter-select:focus {
+.category-filter-select:focus,
+.priority-filter-select:focus,
+.sort-filter-select:focus {
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.priority-filter,
+.sort-filter {
+    display: flex;
+    align-items: center;
 }
 
 .todo-item .category-badge {
@@ -522,6 +580,73 @@ body {
 .category-badge.개인 { background-color: #10B981; }
 .category-badge.쇼핑 { background-color: #F59E0B; }
 .category-badge.학습 { background-color: #8B5CF6; }
+
+/* 우선순위 배지 */
+.todo-item .priority-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: white;
+    margin-left: 8px;
+}
+
+.priority-badge.높음 { background-color: #EF4444; }
+.priority-badge.보통 { background-color: #F59E0B; }
+.priority-badge.낮음 { background-color: #10B981; }
+
+/* 마감일 관련 스타일 */
+.todo-item .due-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-left: 8px;
+}
+
+.todo-item .due-date.urgent {
+    color: #EF4444;
+    font-weight: 500;
+}
+
+.todo-item .due-date.overdue {
+    color: #DC2626;
+    font-weight: bold;
+}
+
+.todo-item .due-date.warning {
+    color: #F59E0B;
+    font-weight: 500;
+}
+
+/* 우선순위별 할 일 아이템 스타일 */
+.todo-item.priority-high {
+    border-left: 4px solid #EF4444;
+}
+
+.todo-item.priority-medium {
+    border-left: 4px solid #F59E0B;
+}
+
+.todo-item.priority-low {
+    border-left: 4px solid #10B981;
+}
+
+/* 마감일 임박/지연 스타일 */
+.todo-item.urgent {
+    background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+    border: 2px solid #FECACA;
+}
+
+.todo-item.overdue {
+    background: linear-gradient(135deg, #FEF2F2 0%, #FEE2E2 100%);
+    border: 2px solid #FCA5A5;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.8; }
+}
 
 /* 카테고리 추가 모달 */
 .modal {
